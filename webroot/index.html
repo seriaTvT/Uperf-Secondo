@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uperf Game Turbo</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f7;
+            --text-color: #1d1d1f;
+            --card-bg: #ffffff;
+            --primary: #007aff;
+            --danger: #ff3b30;
+            --success: #34c759;
+            --border-radius: 12px;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #000000;
+                --text-color: #f5f5f7;
+                --card-bg: #1c1c1e;
+            }
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 16px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .card {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(128,128,128,0.2);
+        }
+        .row:last-child {
+            border-bottom: none;
+        }
+        .label {
+            font-size: 16px;
+            font-weight: 500;
+        }
+        .sub-label {
+            font-size: 12px;
+            color: gray;
+            display: block;
+            margin-top: 4px;
+        }
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 28px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+        /* Status badge */
+        .badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+        }
+        .bg-success { background-color: var(--success); }
+        .bg-danger { background-color: var(--danger); }
+        
+        select {
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid rgba(128,128,128,0.2);
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Uperf Game Turbo</h1>
+    </div>
+
+    <div class="card">
+        <div class="row">
+            <div>
+                <span class="label">服务状态</span>
+            </div>
+            <span id="status-badge" class="badge bg-danger">未运行</span>
+        </div>
+        <div class="row">
+            <div>
+                <span class="label">设备平台</span>
+            </div>
+            <span id="platform-text" style="font-weight: bold; color: gray;">Loading...</span>
+        </div>
+        <div class="row">
+            <div>
+                <span class="label">全局总开关</span>
+                <span class="sub-label">关闭后模块完全停用并清理</span>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="master_switch" onchange="setConfig('master_switch', this.checked)">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="row">
+            <div>
+                <span class="label">性能模式</span>
+            </div>
+            <select id="mode" onchange="setConfig('mode', `\"${this.value}\"`)">
+                <option value="powersave">省电 (Powersave)</option>
+                <option value="balance">均衡 (Balance)</option>
+                <option value="performance">性能 (Performance)</option>
+                <option value="fast">极速 (Fast)</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-top: 0;">高级特性</h3>
+        <div class="row">
+            <div>
+                <span class="label">停用系统温控</span>
+                <span class="sub-label">解锁温度墙，建议搭配散热器</span>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="disable_system_thermal" onchange="setConfig('disable_system_thermal', this.checked)">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="row">
+            <div>
+                <span class="label">解除 GPU 功耗墙</span>
+                <span class="sub-label">防止 GPU 因降频卡顿</span>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="disable_gpu_thermal" onchange="setConfig('disable_gpu_thermal', this.checked)">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="row">
+            <div>
+                <span class="label">MTK FPSGO 优化</span>
+                <span class="sub-label">联发科专属调度接管</span>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="enable_mtk_fpsgo_hack" onchange="setConfig('enable_mtk_fpsgo_hack', this.checked)">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="row">
+            <div>
+                <span class="label">A-SOUL 线程亲和</span>
+                <span class="sub-label">锁定游戏核心线程至大核</span>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="enable_asoul_opt" onchange="setConfig('enable_asoul_opt', this.checked)">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <script>
+        const API_SCRIPT = "/data/adb/modules/uperf/script/api.sh";
+
+        async function runCmd(cmd) {
+            return new Promise((resolve) => {
+                if (window.ksud) {
+                    window.ksud.exec(cmd).then(res => {
+                        resolve(res.stdout || res.stderr);
+                    });
+                } else {
+                    // Fallback for debugging layout in standard browsers
+                    resolve("{}"); 
+                }
+            });
+        }
+
+        async function fetchStatus() {
+            try {
+                const res = await runCmd(`sh ${API_SCRIPT} status`);
+                const data = JSON.parse(res);
+                
+                const badge = document.getElementById('status-badge');
+                if (data.running) {
+                    badge.textContent = "运行中";
+                    badge.className = "badge bg-success";
+                } else {
+                    badge.textContent = "未运行";
+                    badge.className = "badge bg-danger";
+                }
+                
+                document.getElementById('platform-text').textContent = data.platform.toUpperCase();
+                document.getElementById('master_switch').checked = data.master_switch;
+                
+            } catch (e) {
+                console.error("Parse error", e);
+            }
+        }
+
+        async function fetchConfig() {
+            try {
+                const res = await runCmd(`sh ${API_SCRIPT} get_config`);
+                const data = JSON.parse(res);
+                
+                document.getElementById('mode').value = data.mode || 'balance';
+                document.getElementById('disable_system_thermal').checked = data.disable_system_thermal;
+                document.getElementById('disable_gpu_thermal').checked = data.disable_gpu_thermal;
+                document.getElementById('enable_mtk_fpsgo_hack').checked = data.enable_mtk_fpsgo_hack;
+                document.getElementById('enable_asoul_opt').checked = data.enable_asoul_opt;
+            } catch (e) {
+                console.error("Config fetch error", e);
+            }
+        }
+
+        async function setConfig(key, value) {
+            await runCmd(`sh ${API_SCRIPT} set_config ${key} ${value}`);
+            setTimeout(fetchStatus, 500);
+        }
+
+        window.onload = () => {
+            fetchConfig();
+            fetchStatus();
+            setInterval(fetchStatus, 3000);
+        };
+    </script>
+</body>
+</html>

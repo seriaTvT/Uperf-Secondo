@@ -23,11 +23,22 @@ BASEDIR="$(dirname "$(readlink -f "$0")")"
 . "$BASEDIR"/libcgroup.sh
 . "$BASEDIR"/libsysinfo.sh
 
+if [ ! -f "$MODULE_CONFIG" ]; then
+    sh "$SCRIPT_PATH/api.sh" init
+fi
+MASTER_SWITCH=$(grep -o '"master_switch": \?[true|false]*' "$MODULE_CONFIG" | cut -d: -f2 | tr -d ' "')
+if [ "$MASTER_SWITCH" = "false" ]; then
+    echo "Master switch is OFF. Exiting platform_special.sh."
+    exit 0
+fi
 
+ENABLE_MTK_HACK=$(grep -o '"enable_mtk_fpsgo_hack": \?[true|false]*' "$MODULE_CONFIG" | cut -d: -f2 | tr -d ' "')
+DISABLE_GPU_THERMAL=$(grep -o '"disable_gpu_thermal": \?[true|false]*' "$MODULE_CONFIG" | cut -d: -f2 | tr -d ' "')
 
 # MTK specified
 if [ "$(is_mtk)" = "true" ]; then
-    if [ -d "/data/adb/modules/asoul_affinity_opt" ];then
+    if [ "$ENABLE_MTK_HACK" = "true" ]; then
+        if [ -d "/data/adb/modules/asoul_affinity_opt" ];then
         mask_val "0" /sys/module/mtk_fpsgo/parameters/boost_affinity
         mask_val "0" /sys/module/fbt_cpu/parameters/boost_affinity
         mask_val "0" /sys/kernel/fpsgo/minitop/enable
@@ -88,8 +99,10 @@ if [ "$(is_mtk)" = "true" ]; then
         # MTK-EARA
         mask_val "0" /sys/kernel/eara_thermal/enable
     fi
+    fi
 else
-    BUS_DIR="/sys/devices/system/cpu/bus_dcvs"
+    if [ "$DISABLE_GPU_THERMAL" = "true" ]; then
+        BUS_DIR="/sys/devices/system/cpu/bus_dcvs"
     for d in $(ls $BUS_DIR); do
         [ ! -f $BUS_DIR/$d/hw_max_freq ] && continue
         MAX_FREQ=$(cat $BUS_DIR/$d/hw_max_freq)
@@ -109,6 +122,8 @@ else
     mask_val "0" /sys/class/kgsl/kgsl-3d0/force_no_nap
     mask_val "0" /sys/class/kgsl/kgsl-3d0/force_rail_on
     mask_val "0" /sys/class/kgsl/kgsl-3d0/throttling
+    fi
+    
     mask_val "0" /proc/sys/walt/sched_boost
     mask_val "0" /sys/module/metis/parameters/cluaff_control
     mask_val "0" /sys/module/metis/parameters/mi_fboost_enable

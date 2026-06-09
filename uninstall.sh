@@ -37,11 +37,8 @@ wait_until_login() {
 on_remove() {
     wait_until_login
 
-    # keep user perapp config
-    cp -af $USER_PATH/perapp_powermode.txt /sdcard/
+    # Fully remove user config directory for zero residue
     rm -rf $USER_PATH
-    mkdir -p $USER_PATH
-    mv /sdcard/perapp_powermode.txt $USER_PATH/
 
     rm -f /data/powercfg*
 }

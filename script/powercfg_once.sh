@@ -223,10 +223,22 @@ restart_userspace_thermal() {
 }
 
 clear_log
-exec 1>$LOG_FILE
+# exec 1>$LOG_FILE
 # exec 2>&1
 echo "PATH=$PATH"
 echo "sh=$(which sh)"
+
+# Parse config
+if [ ! -f "$MODULE_CONFIG" ]; then
+    sh "$SCRIPT_PATH/api.sh" init
+fi
+MASTER_SWITCH=$(grep -o '"master_switch": \?[true|false]*' "$MODULE_CONFIG" | cut -d: -f2 | tr -d ' "')
+if [ "$MASTER_SWITCH" = "false" ]; then
+    echo "Master switch is OFF. Exiting powercfg_once.sh."
+    exit 0
+fi
+
+DISABLE_SYS_THERM=$(grep -o '"disable_system_thermal": \?[true|false]*' "$MODULE_CONFIG" | cut -d: -f2 | tr -d ' "')
 
 # set permission
 disable_kernel_boost
@@ -235,8 +247,10 @@ unify_sched
 unify_devfreq
 unify_lpm
 
-disable_userspace_thermal
-restart_userspace_thermal
+if [ "$DISABLE_SYS_THERM" = "true" ]; then
+    disable_userspace_thermal
+    restart_userspace_thermal
+fi
 disable_userspace_boost
 restart_userspace_boost
 
@@ -255,8 +269,9 @@ BASEDIR="$(dirname "$(readlink -f "$0")")"
 . "$BASEDIR"/libcgroup.sh
 . "$BASEDIR"/libsysinfo.sh
 
+ENABLE_MTK_HACK=$(grep -o '"enable_mtk_fpsgo_hack": \?[true|false]*' "$MODULE_CONFIG" | cut -d: -f2 | tr -d ' "')
 
-if [ "$(is_mtk)" == "true" ]; then
+if [ "$(is_mtk)" == "true" ] && [ "$ENABLE_MTK_HACK" = "true" ]; then
    
     stop vendor.thermal-hal-2-0.mtk
 
@@ -310,7 +325,9 @@ if [ "$(is_mtk)" == "true" ]; then
 fi
 
 stop vendor_tcpdump
-stop miuibooster
 stop mcd_service
 
-killall -9 mi_thermald
+if [ "$DISABLE_SYS_THERM" = "true" ]; then
+    stop miuibooster
+    killall -9 mi_thermald
+fi

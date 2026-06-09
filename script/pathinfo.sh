@@ -22,6 +22,7 @@ BIN_PATH="$MODULE_PATH/bin"
 FLAG_PATH="$MODULE_PATH/flag"
 
 USER_PATH="/sdcard/Android/yc/uperf"
+MODULE_CONFIG="$MODULE_PATH/module_config.json"
 LOG_FILE="$USER_PATH/initsvc.log"
 
 # use private busybox
