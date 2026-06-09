@@ -1,8 +1,8 @@
 id=uperf
-name=Uperf Game Turbo
-version=️1.48 based on uperf 904
-versionCode=260101
-author=Matt Yang（吟惋兮改）
-description=❤️欢迎使用Uperf Game Turbo！使用时有问题可反馈至yinwanxi0107@gmail.com❤️///❤️Step into Enhanced Gaming with Uperf Game Turbo！If you have any questions, please send feedback to yinwanxi0107@gmail.com❤️
-updateJson=https://github.com/yinwanxi/Uperf-Game-Turbo/raw/master/version.json
+name=Uperf Secondo
+version=️2.0 based on uperf 904
+versionCode=20
+author=Matt Yang, 吟惋兮, Refactor by SeriaTvT
+description=Refactor of Uperf Game Turbo
+updateJson=https://github.com/seriaTvT/Uperf-Secondo/raw/master/version.json
 ASOPT_VERSIONCODE=279
