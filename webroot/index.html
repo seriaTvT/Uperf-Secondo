@@ -154,7 +154,7 @@
             <div>
                 <span class="label">性能模式</span>
             </div>
-            <select id="mode" onchange="setConfig('mode', `\"${this.value}\"`)">
+            <select id="mode" onchange="setConfig('mode', this.value)">
                 <option value="powersave">省电 (Powersave)</option>
                 <option value="balance">均衡 (Balance)</option>
                 <option value="performance">性能 (Performance)</option>
@@ -212,14 +212,38 @@
 
         async function runCmd(cmd) {
             return new Promise((resolve) => {
-                if (window.ksud) {
-                    window.ksud.exec(cmd).then(res => {
-                        resolve(res.stdout || res.stderr);
-                    });
-                } else {
-                    // Fallback for debugging layout in standard browsers
-                    resolve("{}"); 
+                let modernApi = window.ksud || window.apatch || window.mmrl;
+                if (modernApi && modernApi.exec) {
+                    modernApi.exec(cmd).then(res => {
+                        let output = typeof res === 'object' && res !== null && res.stdout !== undefined ? res.stdout : res;
+                        try {
+                            if (typeof output === 'string') {
+                                let parsed = JSON.parse(output);
+                                if (parsed && typeof parsed === 'object' && parsed.stdout !== undefined) output = parsed.stdout;
+                            }
+                        } catch(e) {}
+                        resolve(output ? String(output) : "{}");
+                    }).catch(err => resolve("{}"));
+                    return;
                 }
+
+                if (window.ksu && window.ksu.exec) {
+                    let callbackName = "ksu_callback_" + Date.now() + "_" + Math.floor(Math.random() * 10000);
+                    window[callbackName] = (errno, stdout, stderr) => {
+                        delete window[callbackName];
+                        resolve(stdout || stderr || "{}");
+                    };
+                    try {
+                        window.ksu.exec(cmd, "{}", callbackName);
+                    } catch (e) {
+                        delete window[callbackName];
+                        resolve("{}");
+                    }
+                    return;
+                }
+
+                console.error("No API found!");
+                resolve("{}"); 
             });
         }
 

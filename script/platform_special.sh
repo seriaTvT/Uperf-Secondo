@@ -26,14 +26,14 @@ BASEDIR="$(dirname "$(readlink -f "$0")")"
 if [ ! -f "$MODULE_CONFIG" ]; then
     sh "$SCRIPT_PATH/api.sh" init
 fi
-MASTER_SWITCH=$(grep -o '"master_switch": \?[true|false]*' "$MODULE_CONFIG" | cut -d: -f2 | tr -d ' "')
+MASTER_SWITCH=$(grep '"master_switch"' "$MODULE_CONFIG" | awk -F':' '{print $2}' | tr -d ' ",')
 if [ "$MASTER_SWITCH" = "false" ]; then
     echo "Master switch is OFF. Exiting platform_special.sh."
     exit 0
 fi
 
-ENABLE_MTK_HACK=$(grep -o '"enable_mtk_fpsgo_hack": \?[true|false]*' "$MODULE_CONFIG" | cut -d: -f2 | tr -d ' "')
-DISABLE_GPU_THERMAL=$(grep -o '"disable_gpu_thermal": \?[true|false]*' "$MODULE_CONFIG" | cut -d: -f2 | tr -d ' "')
+ENABLE_MTK_HACK=$(grep '"enable_mtk_fpsgo_hack"' "$MODULE_CONFIG" | awk -F':' '{print $2}' | tr -d ' ",')
+DISABLE_GPU_THERMAL=$(grep '"disable_gpu_thermal"' "$MODULE_CONFIG" | awk -F':' '{print $2}' | tr -d ' ",')
 
 # MTK specified
 if [ "$(is_mtk)" = "true" ]; then

@@ -232,13 +232,13 @@ echo "sh=$(which sh)"
 if [ ! -f "$MODULE_CONFIG" ]; then
     sh "$SCRIPT_PATH/api.sh" init
 fi
-MASTER_SWITCH=$(grep -o '"master_switch": \?[true|false]*' "$MODULE_CONFIG" | cut -d: -f2 | tr -d ' "')
+MASTER_SWITCH=$(grep '"master_switch"' "$MODULE_CONFIG" | awk -F':' '{print $2}' | tr -d ' ",')
 if [ "$MASTER_SWITCH" = "false" ]; then
     echo "Master switch is OFF. Exiting powercfg_once.sh."
     exit 0
 fi
 
-DISABLE_SYS_THERM=$(grep -o '"disable_system_thermal": \?[true|false]*' "$MODULE_CONFIG" | cut -d: -f2 | tr -d ' "')
+DISABLE_SYS_THERM=$(grep '"disable_system_thermal"' "$MODULE_CONFIG" | awk -F':' '{print $2}' | tr -d ' ",')
 
 # set permission
 disable_kernel_boost
@@ -269,7 +269,7 @@ BASEDIR="$(dirname "$(readlink -f "$0")")"
 . "$BASEDIR"/libcgroup.sh
 . "$BASEDIR"/libsysinfo.sh
 
-ENABLE_MTK_HACK=$(grep -o '"enable_mtk_fpsgo_hack": \?[true|false]*' "$MODULE_CONFIG" | cut -d: -f2 | tr -d ' "')
+ENABLE_MTK_HACK=$(grep '"enable_mtk_fpsgo_hack"' "$MODULE_CONFIG" | awk -F':' '{print $2}' | tr -d ' ",')
 
 if [ "$(is_mtk)" == "true" ] && [ "$ENABLE_MTK_HACK" = "true" ]; then
    

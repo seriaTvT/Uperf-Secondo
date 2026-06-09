@@ -30,7 +30,7 @@ case "$action" in
     "status")
         running=false
         if pidof uperf >/dev/null; then running=true; fi
-        master=$(grep -o '"master_switch": \?[true|false]*' "$CONFIG_FILE" | cut -d: -f2 | tr -d ' "')
+        master=$(grep '"master_switch"' "$CONFIG_FILE" | awk -F':' '{print $2}' | tr -d ' ",')
         mode=$(cat "$USER_PATH/cur_powermode.txt" 2>/dev/null || echo "balance")
         platform=$(getprop ro.board.platform)
         
@@ -47,8 +47,16 @@ EOF
         cat "$CONFIG_FILE"
         ;;
     "set_config")
+        echo "set_config: key=$key, value=$value" >> /data/adb/modules/uperf/api.log
         if [ -n "$key" ] && [ -n "$value" ]; then
-            awk -v key="\"$key\"" -v val="$value" '
+            # Ensure quotes for string values (not true/false) in case shell stripped them
+            if [ "$value" != "true" ] && [ "$value" != "false" ] && [ "${value:0:1}" != '"' ]; then
+                val="\"$value\""
+            else
+                val="$value"
+            fi
+            
+            awk -v key="\"$key\"" -v val="$val" '
             {
               if ($1 == key ":") {
                 if ($0 ~ /,$/) {

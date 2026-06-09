@@ -31,3 +31,6 @@ sh $SCRIPT_PATH/powercfg_once.sh
 sh $SCRIPT_PATH/platform_special.sh
 sh $SCRIPT_PATH/miui_migt.sh
 uperf_start
+
+# Remove bootloop protection flag after successful initialization
+rm -f "$FLAG_PATH/need_recuser"

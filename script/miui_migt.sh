@@ -105,7 +105,7 @@ fi
 if [ ! -f "$MODULE_CONFIG" ]; then
     sh "$SCRIPT_PATH/api.sh" init
 fi
-MASTER_SWITCH=$(grep -o '"master_switch": \?[true|false]*' "$MODULE_CONFIG" | cut -d: -f2 | tr -d ' "')
+MASTER_SWITCH=$(grep '"master_switch"' "$MODULE_CONFIG" | awk -F':' '{print $2}' | tr -d ' ",')
 if [ "$MASTER_SWITCH" = "false" ]; then
     echo "Master switch is OFF. Exiting miui_migt.sh."
     exit 0
