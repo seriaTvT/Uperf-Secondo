@@ -83,7 +83,6 @@ BASEDIR="$(dirname $(readlink -f "$0"))"
 abort() {
     print_msg "$1" "$1"
     print_msg "! Uperf Game Turbo安装失败。" "! Uperf Game Turbo installation failed."
-    print_msg "! 请联系开发者 yinwanxi0107@gmail.com" "! Please contact the developer yinwanxi0107@gmail.com"
     exit 1
 }
 
@@ -148,12 +147,10 @@ check_asopt() {
         "KEY_VOLUMEUP")
             print_msg "❗您已确认更新，请稍候" "❗You have confirmed the update, please wait"
             install_corp
-            print_msg "* 已为您安装ASOUL❤️" "* ASOUL has been installed for you❤️"
-            print_msg "* 感谢您的支持与信任😁" "* Thank you for your support and trust😁"
+            print_msg "* 已安装ASOUL" "* ASOUL has been installed"
             ;;
         *)
-            print_msg "❗非常遗憾" "❗What a pity"
-            print_msg "❗已为您取消更新线程模块ASOUL💔" "❗The update of ASOUL has been cancelled for you💔"
+            print_msg "❗已取消更新线程模块ASOUL" "❗The update of ASOUL has been cancelled"
             print_msg " Uperf Game Turbo本体已安装成功" " Uperf Game Turbo has been installed successfully"
             print_msg " 重启即可使用" " you can use it after restarting"
             ;;
@@ -178,7 +175,7 @@ install_corp() {
         if [ "$CUR_ASOPT_VERSIONCODE" -gt "$asopt_module_version" ]; then
             print_msg "* 您正在使用旧版asopt️" "* You are using an old version of asopt"
             print_msg "* Uperf Game Turbo将为您更新至模块内版本️" "* Uperf Game Turbo will update it to the embedded version"
-            print_msg "* 正在为您安装asopt" "* Installing asopt for you"
+            print_msg "* 正在安装asopt" "* Installing asopt"
             killall -9 AsoulOpt
             rm -rf /data/adb/modules*/asoul_affinity_opt
             magisk --install-module "$MODULE_PATH"/modules/asoulopt.zip
@@ -188,10 +185,10 @@ install_corp() {
         fi
     else
         print_msg "* 您尚未安装asopt" "* You have not installed asopt"
-        print_msg "* Uperf Game Turbo将尝试为您第一次安装️" "* Uperf Game Turbo will try to install it for you for the first time"
+        print_msg "* Uperf Game Turbo将尝试第一次安装️" "* Uperf Game Turbo will try to install it for the first time"
         killall -9 AsoulOpt
         rm -rf /data/adb/modules*/asoul_affinity_opt
-        print_msg "- 正在为您安装asopt" "- Installing asopt for you"
+        print_msg "- 正在安装asopt" "- Installing asopt"
         magisk --install-module "$MODULE_PATH"/modules/asoulopt.zip
     fi
     rm -rf "$MODULE_PATH"/modules/asoulopt.zip
@@ -223,7 +220,7 @@ unlock_limit(){
 
 print_msg "* Uperf URL: https://github.com/yc9559/uperf/" "* Uperf URL: https://github.com/yc9559/uperf/"
 print_msg "* Uperf Game Turbo URL: https://github.com/yinwanxi/Uperf-Game-Turbo" "* Uperf Game Turbo URL: https://github.com/yinwanxi/Uperf-Game-Turbo"
-print_msg "* 作者: Matt Yang ❤️吟惋兮❤️改" "* Author: Matt Yang ❤️yinwanxi❤️ modified"
+print_msg "* 作者: Matt Yang, 吟惋兮改, SeriaTvT重构" "* Author: Matt Yang, yinwanxi modified, SeriaTvT refactoring"
 print_msg "* 版本: Game Turbo1.48 基于 uperf 0904" "* Version: Game Turbo1.48 based on uperf 0904"
 print_msg "* 请不要破坏Uperf运行环境" "* Please do not destroy the Uperf running environment"
 print_msg "* 模块将附带安装asopt" "* The module will be installed with asopt"
@@ -233,12 +230,11 @@ print_msg "* 模块可能与第三方内核冲突" "* Module may conflict with s
 print_msg "* 请事先咨询内核作者" "* Please ask the kernel author in advance"
 print_msg "* 请不要破坏Uperf Game Turbo运行环境!!!" "* Please do not destroy the Uperf Game Turbo running environment!!!"
 print_msg "* 请不要自行更改或切换CPU调速器!!!" "* Please do not change/switch the CPU controller yourself!!!"
-print_msg "* ❤️吟惋兮❤️" "* ❤️yinwanxi❤️"
-print_msg "- 正在为您安装Uperf Game Turbo❤️" "- Installing Uperf Game Turbo for you❤️"
+print_msg "- 正在安装Uperf Game Turbo" "- Installing Uperf Game Turbo"
 echo "-----------------------------------------------------"
 echo "-----------------------------------------------------"
 install_uperf
-print_msg "* Uperf Game Turbo安装成功❤️" "* Uperf Game Turbo installed successfully❤️"
+print_msg "* Uperf Game Turbo安装成功" "* Uperf Game Turbo installed successfully"
 print_msg "* 重启即可" "* Please reboot"
 print_msg "* 欢迎使用Uperf Game Turbo" "* Welcome to Uperf Game Turbo"
 print_msg "* 祝体验愉快" "* Have a pleasant experience"
