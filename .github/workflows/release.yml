@@ -1,0 +1,52 @@
+name: Build and Release Module
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 允许创建 release 和上传文件
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 获取完整历史记录以便获取准确的 commit 信息
+
+      - name: Get Commit Info
+        id: info
+        run: |
+          # 获取短 commit hash
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "short_sha=$SHORT_SHA" >> $GITHUB_ENV
+          
+          # 获取最后一次 commit 信息（支持多行）
+          echo "commit_msg<<EOF" >> $GITHUB_ENV
+          git log -1 --pretty=format:"%s%n%n%b" >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          
+          # 获取当前时间作为 tag
+          echo "date=$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_ENV
+
+      - name: Create Flashable Zip
+        run: |
+          # 打包模块文件，排除 git 和 github action 相关的文件
+          zip -r9 Uperf-Secondo-${{ env.short_sha }}.zip . -x "*.git*" -x "*.github*" -x ".gitignore"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: release-${{ env.date }}
+          name: Uperf Secondo - ${{ env.short_sha }}
+          body: |
+            **最近一次 Commit:**
+            
+            ```text
+            ${{ env.commit_msg }}
+            ```
+          files: Uperf-Secondo-${{ env.short_sha }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
