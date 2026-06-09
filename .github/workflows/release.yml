@@ -34,7 +34,7 @@ jobs:
       - name: Create Flashable Zip
         run: |
           # 打包模块文件，排除 git 和 github action 相关的文件
-          zip -r9 Uperf-Secondo-${{ env.short_sha }}.zip . -x "*.git*" -x "*.github*" -x ".gitignore"
+          zip -r9 Uperf-Secondo.zip . -x "*.git*" -x "*.github*" -x ".gitignore"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -47,6 +47,6 @@ jobs:
             ```text
             ${{ env.commit_msg }}
             ```
-          files: Uperf-Secondo-${{ env.short_sha }}.zip
+          files: Uperf-Secondo.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
