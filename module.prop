@@ -4,5 +4,5 @@ version=️2.0 based on uperf 904
 versionCode=20
 author=Matt Yang, 吟惋兮, Refactor by SeriaTvT
 description=Refactor of Uperf Game Turbo
-updateJson=https://github.com/seriaTvT/Uperf-Secondo/raw/master/version.json
+updateJson=https://raw.githubusercontent.com/seriaTvT/Uperf-Secondo/master/version.json
 ASOPT_VERSIONCODE=279
