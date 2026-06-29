@@ -172,7 +172,7 @@
         <div class="row">
             <div>
                 <span class="label">停用系统温控</span>
-                <span class="sub-label">解锁温度墙，建议搭配散热器</span>
+                <span class="sub-label">解锁温度墙，建议搭配散热器（关闭后需重启才能完全恢复）</span>
             </div>
             <label class="switch">
                 <input type="checkbox" id="disable_system_thermal" onchange="setConfig('disable_system_thermal', this.checked)">
@@ -182,7 +182,7 @@
         <div class="row">
             <div>
                 <span class="label">解除 GPU 功耗墙</span>
-                <span class="sub-label">防止 GPU 因降频卡顿</span>
+                <span class="sub-label">防止 GPU 因降频卡顿（关闭后需重启才能完全恢复）</span>
             </div>
             <label class="switch">
                 <input type="checkbox" id="disable_gpu_thermal" onchange="setConfig('disable_gpu_thermal', this.checked)">
@@ -306,6 +306,11 @@
             return data;
         }
 
+        // These features are applied destructively (read-only sysfs locks,
+        // bind-mount masks, stopped services), so enabling them is live but
+        // turning them OFF can't fully self-revert until a reboot.
+        const REBOOT_TO_REVERT = ["disable_system_thermal", "disable_gpu_thermal"];
+
         async function setConfig(key, value) {
             const res = await runCmd(`sh ${API_SCRIPT} set_config ${key} ${value}`);
             if (!String(res).trim().startsWith("success")) {
@@ -313,6 +318,8 @@
                 // value that is actually persisted.
                 notify("保存失败，已恢复为当前生效的配置。", true);
                 await fetchConfig();
+            } else if (value === false && REBOOT_TO_REVERT.includes(key)) {
+                notify("已关闭，但需重启后才能完全恢复（温控/功耗墙）。", true);
             }
             setTimeout(fetchStatus, 500);
         }
