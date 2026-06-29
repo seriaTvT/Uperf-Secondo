@@ -270,58 +270,69 @@ BASEDIR="$(dirname "$(readlink -f "$0")")"
 . "$BASEDIR"/libsysinfo.sh
 
 ENABLE_MTK_HACK=$(grep '"enable_mtk_fpsgo_hack"' "$MODULE_CONFIG" | awk -F':' '{print $2}' | tr -d ' ",')
+DISABLE_GPU_THERMAL=$(grep '"disable_gpu_thermal"' "$MODULE_CONFIG" | awk -F':' '{print $2}' | tr -d ' ",')
 
-if [ "$(is_mtk)" == "true" ] && [ "$ENABLE_MTK_HACK" = "true" ]; then
-   
-    stop vendor.thermal-hal-2-0.mtk
+if [ "$(is_mtk)" == "true" ]; then
 
-    lock_val "0" /sys/module/mtk_core_ctl/parameters/policy_enable
-
-    if [ -d "/proc/gpufreqv2" ]; then
-      
-        lock_val "disable" /proc/gpufreqv2/aging_mode
-        
-        lock_val "stop 1" /proc/mtk_batoc_throttling/battery_oc_protect_stop
-        
-        for i in $(seq 0 10); do
-            lock_val "$i 0 0" /proc/gpufreqv2/limit_table
+    # --- System / kernel thermal (disable_system_thermal) ---
+    if [ "$DISABLE_SYS_THERM" = "true" ]; then
+        # MTK thermal HAL is named differently across vendors/versions.
+        for s in vendor.thermal-hal-2-0.mtk vendor.thermal-hal-1-0.mtk \
+                 vendor.thermal-hal thermal thermalloadalgod thermal_manager; do
+            stop "$s" 2>/dev/null
         done
-        lock_val "1 1 1" /proc/gpufreqv2/limit_table
-        lock_val "3 1 1" /proc/gpufreqv2/limit_table
-    
-        lock_val "0" /sys/kernel/fpsgo/fbt/thrm_enable
-        lock_val "300000" /sys/kernel/fpsgo/fbt/thrm_temp_th
-    elif [ -d "/proc/gpufreq" ]; then
-        lock_val "0" /sys/module/cache_ctl/parameters/enable
-        lock_val "0" /proc/gpufreq/gpufreq_aging_enable
-        lock /sys/devices/system/cpu/sched/set_sched_isolation
-        for i in $(seq 0 9); do
-            lock_val "0" "$CPU"/cpu"$i"/sched_load_boost
-            lock_val "$i" /sys/devices/system/cpu/sched/set_sched_deisolation
-        done
-
-        #force use ppm
-        echo "force uperf use PPM"
-        lock_val "0 3200000" /proc/ppm/policy/hard_userlimit_max_cpu_freq
-        lock_val "0 3200000" /proc/ppm/policy/hard_userlimit_min_cpu_freq
-        lock_val "1 3200000" /proc/ppm/policy/hard_userlimit_max_cpu_freq
-        lock_val "1 3200000" /proc/ppm/policy/hard_userlimit_min_cpu_freq
-        lock_val "2 3200000" /proc/ppm/policy/hard_userlimit_max_cpu_freq
-        lock_val "2 3200000" /proc/ppm/policy/hard_userlimit_min_cpu_freq
-        echo "killing gpu thermal"
-        for i in $(seq 0 8); do
-            lock_val "$i 0 0" /proc/gpufreq/gpufreq_limit_table
-        done
-        lock_val "1 1 1" /proc/gpufreq/gpufreq_limit_table
-        # MTK-EARA
-        lock_val "0" /sys/kernel/eara_thermal/enable
-        lock_val "0" /proc/wmt_tm/tx_thro
-        lock_val "-1" /proc/wmt_tm/tx_thro_limit
-
         lock_val "0" /sys/kernel/fpsgo/fbt/thrm_enable
         lock_val "300000" /sys/kernel/fpsgo/fbt/thrm_temp_th
     fi
-    killall -9 vendor.mediatek.hardware.mtkpower@1.0-service
+
+    # --- FPSGO scheduling (enable_mtk_fpsgo_hack) ---
+    if [ "$ENABLE_MTK_HACK" = "true" ]; then
+        lock_val "0" /sys/module/mtk_core_ctl/parameters/policy_enable
+
+        # Legacy (non-gpufreqv2) platforms: unpin scheduling and force PPM
+        if [ ! -d "/proc/gpufreqv2" ] && [ -d "/proc/gpufreq" ]; then
+            lock_val "0" /sys/module/cache_ctl/parameters/enable
+            lock /sys/devices/system/cpu/sched/set_sched_isolation
+            for i in $(seq 0 9); do
+                lock_val "0" "$CPU"/cpu"$i"/sched_load_boost
+                lock_val "$i" /sys/devices/system/cpu/sched/set_sched_deisolation
+            done
+
+            #force use ppm
+            echo "force uperf use PPM"
+            lock_val "0 3200000" /proc/ppm/policy/hard_userlimit_max_cpu_freq
+            lock_val "0 3200000" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+            lock_val "1 3200000" /proc/ppm/policy/hard_userlimit_max_cpu_freq
+            lock_val "1 3200000" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+            lock_val "2 3200000" /proc/ppm/policy/hard_userlimit_max_cpu_freq
+            lock_val "2 3200000" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+        fi
+        killall -9 vendor.mediatek.hardware.mtkpower@1.0-service
+    fi
+
+    # --- GPU power wall (disable_gpu_thermal) ---
+    if [ "$DISABLE_GPU_THERMAL" = "true" ]; then
+        if [ -d "/proc/gpufreqv2" ]; then
+            lock_val "disable" /proc/gpufreqv2/aging_mode
+            lock_val "stop 1" /proc/mtk_batoc_throttling/battery_oc_protect_stop
+            for i in $(seq 0 10); do
+                lock_val "$i 0 0" /proc/gpufreqv2/limit_table
+            done
+            lock_val "1 1 1" /proc/gpufreqv2/limit_table
+            lock_val "3 1 1" /proc/gpufreqv2/limit_table
+        elif [ -d "/proc/gpufreq" ]; then
+            lock_val "0" /proc/gpufreq/gpufreq_aging_enable
+            echo "killing gpu thermal"
+            for i in $(seq 0 8); do
+                lock_val "$i 0 0" /proc/gpufreq/gpufreq_limit_table
+            done
+            lock_val "1 1 1" /proc/gpufreq/gpufreq_limit_table
+            # MTK-EARA
+            lock_val "0" /sys/kernel/eara_thermal/enable
+            lock_val "0" /proc/wmt_tm/tx_thro
+            lock_val "-1" /proc/wmt_tm/tx_thro_limit
+        fi
+    fi
 fi
 
 stop vendor_tcpdump

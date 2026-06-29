@@ -34,71 +34,81 @@ fi
 
 ENABLE_MTK_HACK=$(grep '"enable_mtk_fpsgo_hack"' "$MODULE_CONFIG" | awk -F':' '{print $2}' | tr -d ' ",')
 DISABLE_GPU_THERMAL=$(grep '"disable_gpu_thermal"' "$MODULE_CONFIG" | awk -F':' '{print $2}' | tr -d ' ",')
+DISABLE_SYS_THERM=$(grep '"disable_system_thermal"' "$MODULE_CONFIG" | awk -F':' '{print $2}' | tr -d ' ",')
 
 # MTK specified
 if [ "$(is_mtk)" = "true" ]; then
+    # --- FPSGO scheduling / affinity takeover (enable_mtk_fpsgo_hack) ---
     if [ "$ENABLE_MTK_HACK" = "true" ]; then
-        if [ -d "/data/adb/modules/asoul_affinity_opt" ];then
-        mask_val "0" /sys/module/mtk_fpsgo/parameters/boost_affinity
-        mask_val "0" /sys/module/fbt_cpu/parameters/boost_affinity
-        mask_val "0" /sys/kernel/fpsgo/minitop/enable
-    else
-        mask_val "1" /sys/module/mtk_fpsgo/parameters/boost_affinity
-        mask_val "1" /sys/module/fbt_cpu/parameters/boost_affinity
-        mask_val "1" /sys/kernel/fpsgo/minitop/enable
-    fi
-    mask_val "0" /sys/module/mtk_fpsgo/parameters/perfmgr_enable
-    mask_val "0" /sys/module/mtk_core_ctl/parameters/policy_enable
-    # FPSGO thermal
-    mask_val "0" /sys/kernel/fpsgo/fbt/thrm_enable
-    mask_val "95000" /sys/kernel/fpsgo/fbt/thrm_temp_th
-    mask_val "-1" /sys/kernel/fpsgo/fbt/thrm_limit_cpu
-    mask_val "-1" /sys/kernel/fpsgo/fbt/thrm_sub_cpu
+        if [ -d "/data/adb/modules/asoul_affinity_opt" ]; then
+            mask_val "0" /sys/module/mtk_fpsgo/parameters/boost_affinity
+            mask_val "0" /sys/module/fbt_cpu/parameters/boost_affinity
+            mask_val "0" /sys/kernel/fpsgo/minitop/enable
+        else
+            mask_val "1" /sys/module/mtk_fpsgo/parameters/boost_affinity
+            mask_val "1" /sys/module/fbt_cpu/parameters/boost_affinity
+            mask_val "1" /sys/kernel/fpsgo/minitop/enable
+        fi
+        mask_val "0" /sys/module/mtk_fpsgo/parameters/perfmgr_enable
+        mask_val "0" /sys/module/mtk_core_ctl/parameters/policy_enable
 
-    # Platform specified Config
-    if [ -d "/proc/gpufreqv2" ]; then
-        # Disabel auto voltage scaling by MTK
-        lock_val "disable" /proc/gpufreqv2/aging_mode
-        #Battery current limit
-        lock_val "stop 1" /proc/mtk_batoc_throttling/battery_oc_protect_stop
-        #echo "killing gpu thermal"
-        for i in $(seq 0 10); do
-            lock_val "$i 0 0" /proc/gpufreqv2/limit_table
-        done
-        lock_val "1 1 1" /proc/gpufreqv2/limit_table
-        lock_val "3 1 1" /proc/gpufreqv2/limit_table
-        lock_val "0" /sys/kernel/ged/hal/fastdvfs_mode
-    else
-        # Disabel auto voltage scaling by MTK
-        lock_val "0" /proc/gpufreq/gpufreq_aging_enable
-        # Enable CPU7 for MTK, MT6893 and before(need modify powerhal)
-        mask_val "" /sys/devices/system/cpu/sched/cpu_prefer
-        mask_val "" /sys/devices/system/cpu/sched/set_sched_isolation
-        for i in $(seq 0 9); do
-            mask_val "0" "$CPU"/cpu"$i"/sched_load_boost
-            mask_val "$i" /sys/devices/system/cpu/sched/set_sched_deisolation
-        done
-        lock_val "0" /sys/devices/system/cpu/sched/hint_enable
-        lock_val "65" /sys/devices/system/cpu/sched/hint_load_thresh
-        #force use ppm
-        echo "force uperf use PPM"
-        lock_val "0 3200000" /proc/ppm/policy/hard_userlimit_max_cpu_freq
-        lock_val "0 3200000" /proc/ppm/policy/hard_userlimit_min_cpu_freq
-        lock_val "1 3200000" /proc/ppm/policy/hard_userlimit_max_cpu_freq
-        lock_val "1 3200000" /proc/ppm/policy/hard_userlimit_min_cpu_freq
-        lock_val "2 3200000" /proc/ppm/policy/hard_userlimit_max_cpu_freq
-        lock_val "2 3200000" /proc/ppm/policy/hard_userlimit_min_cpu_freq
-        lock_val "0" /proc/ppm/cobra_limit_to_budget
-        lock_val "0" /proc/ppm/cobra_budget_to_limit
-        lock /proc/ppm/policy/*
-        lock /proc/ppm/*
-        for i in $(seq 0 8); do
-            lock_val "$i 0 0" /proc/gpufreq/gpufreq_limit_table
-        done
-        mask_val "1 1 1" /proc/gpufreq/gpufreq_limit_table
-        # MTK-EARA
-        mask_val "0" /sys/kernel/eara_thermal/enable
+        # Legacy (non-gpufreqv2) platforms: unpin scheduling and force PPM
+        if [ ! -d "/proc/gpufreqv2" ]; then
+            # Enable CPU7 for MTK, MT6893 and before(need modify powerhal)
+            mask_val "" /sys/devices/system/cpu/sched/cpu_prefer
+            mask_val "" /sys/devices/system/cpu/sched/set_sched_isolation
+            for i in $(seq 0 9); do
+                mask_val "0" "$CPU"/cpu"$i"/sched_load_boost
+                mask_val "$i" /sys/devices/system/cpu/sched/set_sched_deisolation
+            done
+            lock_val "0" /sys/devices/system/cpu/sched/hint_enable
+            lock_val "65" /sys/devices/system/cpu/sched/hint_load_thresh
+            #force use ppm
+            echo "force uperf use PPM"
+            lock_val "0 3200000" /proc/ppm/policy/hard_userlimit_max_cpu_freq
+            lock_val "0 3200000" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+            lock_val "1 3200000" /proc/ppm/policy/hard_userlimit_max_cpu_freq
+            lock_val "1 3200000" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+            lock_val "2 3200000" /proc/ppm/policy/hard_userlimit_max_cpu_freq
+            lock_val "2 3200000" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+            lock_val "0" /proc/ppm/cobra_limit_to_budget
+            lock_val "0" /proc/ppm/cobra_budget_to_limit
+            lock /proc/ppm/policy/*
+            lock /proc/ppm/*
+        fi
     fi
+
+    # --- System / kernel thermal (disable_system_thermal) ---
+    if [ "$DISABLE_SYS_THERM" = "true" ]; then
+        mask_val "0" /sys/kernel/fpsgo/fbt/thrm_enable
+        mask_val "95000" /sys/kernel/fpsgo/fbt/thrm_temp_th
+        mask_val "-1" /sys/kernel/fpsgo/fbt/thrm_limit_cpu
+        mask_val "-1" /sys/kernel/fpsgo/fbt/thrm_sub_cpu
+    fi
+
+    # --- GPU power wall (disable_gpu_thermal) ---
+    if [ "$DISABLE_GPU_THERMAL" = "true" ]; then
+        if [ -d "/proc/gpufreqv2" ]; then
+            # Disable auto voltage scaling by MTK
+            lock_val "disable" /proc/gpufreqv2/aging_mode
+            # Battery current limit
+            lock_val "stop 1" /proc/mtk_batoc_throttling/battery_oc_protect_stop
+            for i in $(seq 0 10); do
+                lock_val "$i 0 0" /proc/gpufreqv2/limit_table
+            done
+            lock_val "1 1 1" /proc/gpufreqv2/limit_table
+            lock_val "3 1 1" /proc/gpufreqv2/limit_table
+            lock_val "0" /sys/kernel/ged/hal/fastdvfs_mode
+        else
+            # Disable auto voltage scaling by MTK
+            lock_val "0" /proc/gpufreq/gpufreq_aging_enable
+            for i in $(seq 0 8); do
+                lock_val "$i 0 0" /proc/gpufreq/gpufreq_limit_table
+            done
+            mask_val "1 1 1" /proc/gpufreq/gpufreq_limit_table
+            # MTK-EARA
+            mask_val "0" /sys/kernel/eara_thermal/enable
+        fi
     fi
 else
     if [ "$DISABLE_GPU_THERMAL" = "true" ]; then
