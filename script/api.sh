@@ -7,9 +7,9 @@ BASEDIR="$(dirname $(readlink -f "$0"))"
 . $BASEDIR/pathinfo.sh
 
 CONFIG_FILE="$MODULE_PATH/module_config.json"
+LOCK_DIR="$CONFIG_FILE.lock"
 
-# Initialize config if not exists
-if [ ! -f "$CONFIG_FILE" ]; then
+write_default_config() {
     cat > "$CONFIG_FILE" <<EOF
 {
   "master_switch": true,
@@ -20,6 +20,35 @@ if [ ! -f "$CONFIG_FILE" ]; then
   "disable_gpu_thermal": true
 }
 EOF
+    chmod 644 "$CONFIG_FILE"
+}
+
+# A config is considered valid only if it carries the keys we expect.
+# A corrupt file (e.g. empty or stray newlines from an old concurrent write)
+# must be recreated, otherwise it can never self-heal.
+config_is_valid() {
+    [ -s "$CONFIG_FILE" ] && grep -q '"master_switch"' "$CONFIG_FILE"
+}
+
+# Atomic, busybox-safe lock. mkdir is atomic across processes, so rapid
+# concurrent set_config calls (e.g. toggling several switches at once) are
+# serialized instead of clobbering a shared temp file.
+acquire_lock() {
+    i=0
+    while ! mkdir "$LOCK_DIR" 2>/dev/null; do
+        i=$((i + 1))
+        [ "$i" -gt 50 ] && break   # ~5s safety timeout
+        sleep 0.1 2>/dev/null || sleep 1
+    done
+}
+
+release_lock() {
+    rmdir "$LOCK_DIR" 2>/dev/null
+}
+
+# Initialize / self-heal config
+if ! config_is_valid; then
+    write_default_config
 fi
 
 action="$1"
@@ -47,15 +76,19 @@ EOF
         cat "$CONFIG_FILE"
         ;;
     "set_config")
-        echo "set_config: key=$key, value=$value" >> /data/adb/modules/uperf/api.log
         if [ -n "$key" ] && [ -n "$value" ]; then
             # Ensure quotes for string values (not true/false) in case shell stripped them
-            if [ "$value" != "true" ] && [ "$value" != "false" ] && [ "${value:0:1}" != '"' ]; then
-                val="\"$value\""
-            else
-                val="$value"
-            fi
-            
+            case "$value" in
+                true|false|\"*) val="$value" ;;
+                *) val="\"$value\"" ;;
+            esac
+
+            acquire_lock
+
+            # Self-heal before editing so a corrupt file can't propagate.
+            config_is_valid || write_default_config
+
+            tmp="${CONFIG_FILE}.$$.tmp"
             awk -v key="\"$key\"" -v val="$val" '
             {
               if ($1 == key ":") {
@@ -67,14 +100,26 @@ EOF
               } else {
                 print $0
               }
-            }' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp"
-            mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-            
-            # Apply immediate mode switch if the key is "mode"
-            if [ "$key" = "mode" ]; then
-                sh "$SCRIPT_PATH/powercfg_main.sh" $(echo "$value" | tr -d '"')
+            }' "$CONFIG_FILE" > "$tmp"
+
+            # Only commit if the rewrite produced a sane file; never overwrite
+            # the config with empty/garbage output.
+            if [ -s "$tmp" ] && grep -q '"master_switch"' "$tmp"; then
+                mv "$tmp" "$CONFIG_FILE"
+                chmod 644 "$CONFIG_FILE"
+                result="success"
+            else
+                rm -f "$tmp"
+                result="error: rewrite failed"
             fi
-            echo "success"
+
+            release_lock
+
+            # Apply immediate mode switch if the key is "mode"
+            if [ "$key" = "mode" ] && [ "$result" = "success" ]; then
+                sh "$SCRIPT_PATH/powercfg_main.sh" $(echo "$value" | tr -d '"') >/dev/null 2>&1
+            fi
+            echo "$result"
         else
             echo "error: missing key or value"
         fi

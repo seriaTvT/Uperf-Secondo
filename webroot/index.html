@@ -127,6 +127,10 @@
         <h1>Uperf Game Turbo</h1>
     </div>
 
+    <div id="notice" style="display:none; background-color: var(--danger); color: #fff;
+        padding: 12px 16px; border-radius: var(--border-radius); margin-bottom: 16px;
+        font-size: 14px; font-weight: 500;"></div>
+
     <div class="card">
         <div class="row">
             <div>
@@ -210,6 +214,18 @@
     <script>
         const API_SCRIPT = "/data/adb/modules/uperf/script/api.sh";
 
+        let noticeTimer = null;
+        function notify(msg, isError) {
+            const el = document.getElementById('notice');
+            if (!msg) { el.style.display = 'none'; return; }
+            el.textContent = msg;
+            el.style.backgroundColor = isError ? 'var(--danger)' : 'var(--success)';
+            el.style.display = 'block';
+            if (noticeTimer) clearTimeout(noticeTimer);
+            // Errors stay until the next action clears them; successes auto-hide.
+            if (!isError) noticeTimer = setTimeout(() => { el.style.display = 'none'; }, 2500);
+        }
+
         async function runCmd(cmd) {
             return new Promise((resolve) => {
                 let modernApi = window.ksud || window.apatch || window.mmrl;
@@ -270,22 +286,34 @@
         }
 
         async function fetchConfig() {
+            const res = await runCmd(`sh ${API_SCRIPT} get_config`);
+            let data;
             try {
-                const res = await runCmd(`sh ${API_SCRIPT} get_config`);
-                const data = JSON.parse(res);
-                
-                document.getElementById('mode').value = data.mode || 'balance';
-                document.getElementById('disable_system_thermal').checked = data.disable_system_thermal;
-                document.getElementById('disable_gpu_thermal').checked = data.disable_gpu_thermal;
-                document.getElementById('enable_mtk_fpsgo_hack').checked = data.enable_mtk_fpsgo_hack;
-                document.getElementById('enable_asoul_opt').checked = data.enable_asoul_opt;
+                data = JSON.parse(res);
             } catch (e) {
-                console.error("Config fetch error", e);
+                // Don't silently paint misleading defaults onto the controls —
+                // make the failure visible so it can be diagnosed.
+                console.error("Config fetch error", e, res);
+                notify("配置读取失败：module_config.json 可能损坏。请重新进入或重装模块。", true);
+                return;
             }
+
+            document.getElementById('mode').value = data.mode || 'balance';
+            document.getElementById('disable_system_thermal').checked = data.disable_system_thermal;
+            document.getElementById('disable_gpu_thermal').checked = data.disable_gpu_thermal;
+            document.getElementById('enable_mtk_fpsgo_hack').checked = data.enable_mtk_fpsgo_hack;
+            document.getElementById('enable_asoul_opt').checked = data.enable_asoul_opt;
+            return data;
         }
 
         async function setConfig(key, value) {
-            await runCmd(`sh ${API_SCRIPT} set_config ${key} ${value}`);
+            const res = await runCmd(`sh ${API_SCRIPT} set_config ${key} ${value}`);
+            if (!String(res).trim().startsWith("success")) {
+                // Write failed: tell the user, then revert the control to the
+                // value that is actually persisted.
+                notify("保存失败，已恢复为当前生效的配置。", true);
+                await fetchConfig();
+            }
             setTimeout(fetchStatus, 500);
         }
 

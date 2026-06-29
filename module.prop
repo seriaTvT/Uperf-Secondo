@@ -1,7 +1,7 @@
 id=uperf
 name=Uperf Secondo
-version=️2.1 based on uperf 904
-versionCode=21
+version=️2.2 based on uperf 904
+versionCode=22
 author=Matt Yang, 吟惋兮, Refactor by SeriaTvT
 description=Refactor of Uperf Game Turbo
 updateJson=https://raw.githubusercontent.com/seriaTvT/Uperf-Secondo/master/version.json
