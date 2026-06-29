@@ -162,9 +162,29 @@ get_value() {
    echo "$(grep -E "^$1=" "$2" | head -n 1 | cut -d= -f2)"
 }
 
+# Install a module zip using whichever root manager is present.
+# Magisk uses `magisk --install-module`, KernelSU uses `ksud module install`,
+# APatch uses `apd module install`. Calling `magisk` unconditionally fails
+# silently on KernelSU/APatch, so asopt would never get installed.
+install_submodule() {
+    local zip="$1"
+    if command -v magisk >/dev/null 2>&1; then
+        magisk --install-module "$zip"
+    elif command -v ksud >/dev/null 2>&1; then
+        ksud module install "$zip"
+    elif [ -x /data/adb/ksud ]; then
+        /data/adb/ksud module install "$zip"
+    elif command -v apd >/dev/null 2>&1; then
+        apd module install "$zip"
+    else
+        print_msg "! 未找到可用的Root管理器，无法安装asopt" "! No supported root manager found, cannot install asopt"
+        return 1
+    fi
+}
+
 install_corp() {
     if [ -d "/data/adb/modules/unity_affinity_opt" ] || [ -d "/data/adb/modules_update/unity_affinity_opt" ]; then
-        rm /data/adb/modules*/unity_affinity_opt
+        rm -rf /data/adb/modules*/unity_affinity_opt
     fi
     CUR_ASOPT_VERSIONCODE="$(get_value ASOPT_VERSIONCODE "$MODULE_PATH"/module.prop)"
     asopt_module_version="0"
@@ -178,7 +198,7 @@ install_corp() {
             print_msg "* 正在安装asopt" "* Installing asopt"
             killall -9 AsoulOpt
             rm -rf /data/adb/modules*/asoul_affinity_opt
-            magisk --install-module "$MODULE_PATH"/modules/asoulopt.zip
+            install_submodule "$MODULE_PATH"/modules/asoulopt.zip
         else
             print_msg "* 您正在使用新版本的asopt" "* You are using a new version of asopt"
             print_msg "* Uperf Game Turbo将不予操作️" "* Uperf Game Turbo will not operate"
@@ -189,7 +209,7 @@ install_corp() {
         killall -9 AsoulOpt
         rm -rf /data/adb/modules*/asoul_affinity_opt
         print_msg "- 正在安装asopt" "- Installing asopt"
-        magisk --install-module "$MODULE_PATH"/modules/asoulopt.zip
+        install_submodule "$MODULE_PATH"/modules/asoulopt.zip
     fi
     rm -rf "$MODULE_PATH"/modules/asoulopt.zip
 }

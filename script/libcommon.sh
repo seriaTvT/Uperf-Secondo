@@ -45,15 +45,6 @@ mask_val() {
 }
 
 # $1:value $2:filepaths
-mask_val() {
-for p in $2; do
-if [ -f "$p" ]; then
-echo "$1" >"$p"
-fi
-done
-}
-
-# $1:value $2:filepaths
 mutate() {
     for p in $2; do
         if [ -f "$p" ]; then
@@ -66,7 +57,7 @@ mutate() {
 # $1:file path
 lock() {
     if [ -f "$1" ]; then
-        chown root:root "$p"
+        chown root:root "$1"
         chmod 0444 "$1"
     fi
 }

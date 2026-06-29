@@ -25,6 +25,10 @@ uperf_stop() {
 }
 
 uperf_start() {
+    # never run two instances: a live re-apply from the WebUI may call this
+    # while uperf is already running.
+    killall uperf 2>/dev/null
+
     # raise inotify limit in case file sync existed
     lock_val "1048576" /proc/sys/fs/inotify/max_queued_events
     lock_val "1048576" /proc/sys/fs/inotify/max_user_watches

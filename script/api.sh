@@ -115,9 +115,27 @@ EOF
 
             release_lock
 
-            # Apply immediate mode switch if the key is "mode"
-            if [ "$key" = "mode" ] && [ "$result" = "success" ]; then
-                sh "$SCRIPT_PATH/powercfg_main.sh" $(echo "$value" | tr -d '"') >/dev/null 2>&1
+            # Apply the change immediately so the WebUI never requires a reboot.
+            # All paths route through initsvc.sh (backgrounded to keep the UI
+            # responsive) so they share its lock and never race on sysfs.
+            if [ "$result" = "success" ]; then
+                case "$key" in
+                    mode)
+                        sh "$SCRIPT_PATH/powercfg_main.sh" "$(echo "$value" | tr -d '"')" >/dev/null 2>&1
+                        ;;
+                    master_switch)
+                        # Start/stop the whole service.
+                        nohup sh "$SCRIPT_PATH/initsvc.sh" >/dev/null 2>&1 &
+                        ;;
+                    enable_asoul_opt)
+                        # Just the A-SOUL daemon — no need to bounce uperf.
+                        nohup sh "$SCRIPT_PATH/initsvc.sh" asoul >/dev/null 2>&1 &
+                        ;;
+                    disable_system_thermal|disable_gpu_thermal|enable_mtk_fpsgo_hack)
+                        # Re-apply the per-platform tweaks that read these keys.
+                        nohup sh "$SCRIPT_PATH/initsvc.sh" tweaks >/dev/null 2>&1 &
+                        ;;
+                esac
             fi
             echo "$result"
         else
